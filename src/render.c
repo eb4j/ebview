@@ -541,6 +541,7 @@ void draw_content(CANVAS *canvas, DRAW_TEXT *text, BOOK_INFO *binfo, TAG *tag, g
 	gchar end_tag[512];
 	gchar tag_name[512];
 	gchar attr[512];
+	gchar alt[32];
 	gchar code[16];
 	gchar body[65536];
 	gchar *content;
@@ -634,36 +635,44 @@ void draw_content(CANVAS *canvas, DRAW_TEXT *text, BOOK_INFO *binfo, TAG *tag, g
 
 			} else if(strcmp(tag_name, "modification") == 0){
 
-				get_content(p, tag_name, &content, &content_length);
+			    get_content(p, tag_name, &content, &content_length);
 				
-				get_attr(start_tag, "method", attr);
+			    get_attr(start_tag, "method", attr);
 
-				{
-					gchar *tmps;
-					tmps = g_strndup(content, content_length);
-					g_free(tmps);
-				}
+			    {
+			        gchar *tmps;
+			        tmps = g_strndup(content, content_length);
+			        g_free(tmps);
+			    }
 
-				if(tag) {
-					l_tag = *tag;
-					if(attr[0] == '1')
-					  l_tag.type = TAG_TYPE_ITALIC | tag->type;
-					else
-					  l_tag.type = TAG_TYPE_EMPHASIS | tag->type;
+			    if(tag) {
+			        l_tag = *tag;
+			        if(attr[0] == '1')
+			            l_tag.type = TAG_TYPE_ITALIC | tag->type;
+			        else
+			            l_tag.type = TAG_TYPE_EMPHASIS | tag->type;
 
-				} else {
-					if(attr[0] == '1')
-					  l_tag.type = TAG_TYPE_ITALIC;
-					else 
-					  l_tag.type = TAG_TYPE_EMPHASIS;
-				}
+			    } else {
+			        if(attr[0] == '1')
+			            l_tag.type = TAG_TYPE_ITALIC;
+			        else
+			            l_tag.type = TAG_TYPE_EMPHASIS;
+			    }
 				
-				l_text.text = content;
-				l_text.length = content_length;
+			    l_text.text = content;
+			    l_text.length = content_length;
 
-				draw_content(canvas, &l_text, binfo, &l_tag, word);
+			    draw_content(canvas, &l_text, binfo, &l_tag, word);
 
-				skip_end_tag(&p, tag_name);
+			    skip_end_tag(&p, tag_name);
+
+			} else if(strcmp(tag_name, "unicode") == 0) {
+
+			    get_attr(start_tag, "str", alt);
+			    l_text.text = alt;
+			    l_text.length = g_utf8_strlen(alt, 31);
+                draw_string(canvas, &l_text, tag, NULL);
+                skip_start_tag(&p, tag_name);
 
 			} else if(strcmp(tag_name, "gaiji") == 0){
 

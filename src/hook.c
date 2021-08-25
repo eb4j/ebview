@@ -191,8 +191,31 @@ static EB_Error_Code hook_narrow_font(EB_Book *book, EB_Appendix *appendix, void
 {
 	
 	char text[64];
-
-	sprintf (text, "<gaiji code=h%04x>", argv[0]);
+	char alt[32];
+	int start;
+	int end;
+    int val = argv[0];
+    if (eb_have_narrow_alt(appendix)) {
+        if (eb_narrow_alt_start(appendix, &start) != EB_SUCCESS) {
+            goto gaiji;
+        }
+        if (eb_narrow_alt_end(appendix, &end) != EB_SUCCESS) {
+            goto gaiji;
+        }
+        if (start <= val && val <= end) {
+            if (eb_narrow_alt_character_text(appendix, val, alt) != EB_SUCCESS) {
+                goto gaiji;
+            }
+            if (strlen(alt) <= 0) {
+                goto gaiji;
+            }
+            sprintf (text, "<unicode str=\"%s\">", alt);
+            eb_write_text_string(book, text);
+            return EB_SUCCESS;
+        }
+    }
+    gaiji:
+    sprintf (text, "<gaiji code=h%04x>", argv[0]);
 	eb_write_text_string(book, text);
 
 	return EB_SUCCESS;
@@ -201,7 +224,27 @@ static EB_Error_Code hook_narrow_font(EB_Book *book, EB_Appendix *appendix, void
 static EB_Error_Code hook_wide_font(EB_Book *book, EB_Appendix *appendix, void *container, EB_Hook_Code code, int argc, const unsigned int *argv)
 {
 	char text[64];
-
+	char alt[32];
+	int start;
+	int end;
+	int val = argv[0];
+	if (eb_have_wide_alt(appendix)) {
+	    if (eb_wide_alt_start(appendix, &start) != EB_SUCCESS) {
+	        goto gaiji;
+	    }
+	    if (eb_wide_alt_end(appendix, &end) != EB_SUCCESS) {
+	        goto gaiji;
+	    }
+	    if (start <= val && val <= end) {
+	        if (eb_wide_alt_character_text(appendix, val, alt) != EB_SUCCESS) {
+	            goto gaiji;
+	        }
+	        sprintf (text, "<unicode str=%s>", alt);
+	        eb_write_text_string(book, text);
+	        return EB_SUCCESS;
+	    }
+	}
+	gaiji:
 	sprintf (text, "<gaiji code=z%04x>", argv[0]);
 	eb_write_text_string(book, text);
 
