@@ -39,7 +39,7 @@ gboolean iseuc(const guchar *buff);
 gint guess_kanji(gint imax, guchar *buf);
 void katakana_to_hiragana(gchar *word);
 void hiragana_to_katakana(gchar *word);
-
+gchar *unescaper(gchar *word);
 
 void hex_dump(const gchar *buf);
 

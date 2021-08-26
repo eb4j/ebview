@@ -158,154 +158,160 @@ GdkPixbuf *load_xbm(BOOK_INFO *binfo, gchar *name, gint *w, gint *h, gchar *colo
 	return(pixbuf);
 }
 
+static void draw_string3(CANVAS *canvas, gchar *utf_str, TAG *tag)
+{
+    gint tag_count=0;
+    GtkTextTag *tags[8];
+
+    if(tag == NULL){
+        if((0 <= canvas->indent)  && (canvas->indent < MAX_INDENT)){
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tag_plain, tag_indent[canvas->indent], NULL);
+        } else {
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tag_plain, NULL);
+        }
+        goto END;
+    }
+
+    tag->start = gtk_text_iter_get_offset(canvas->iter);
+
+    if((!(tag->type & TAG_TYPE_EMPHASIS)) &&
+       (!(tag->type & TAG_TYPE_ITALIC)) &&
+       (!(tag->type & TAG_TYPE_SUPERSCRIPT)) &&
+       (!(tag->type & TAG_TYPE_SUBSCRIPT)))
+        tags[tag_count++] = tag_plain;
+
+
+    if(tag->type & TAG_TYPE_KEYWORD){
+        tags[tag_count++] = tag_keyword;
+    }
+
+    if(tag->type & TAG_TYPE_EMPHASIS){
+        tags[tag_count++] = tag_bold;
+    }
+
+    if(tag->type & TAG_TYPE_ITALIC){
+        tags[tag_count++] = tag_italic;
+    }
+
+    if(tag->type & TAG_TYPE_SUBSCRIPT){
+        tags[tag_count++] = tag_subscript;
+    }
+
+    if(tag->type & TAG_TYPE_SUPERSCRIPT){
+        tags[tag_count++] = tag_superscript;
+    }
+
+    if(tag->type & TAG_TYPE_CENTER){
+        tags[tag_count++] = tag_center;
+    }
+
+    if(tag->type & TAG_TYPE_LINK){
+        tags[tag_count++] = tag_link;
+    }
+
+    if(tag->type & TAG_TYPE_SOUND){
+        tags[tag_count++] = tag_sound;
+    }
+
+    if(tag->type & TAG_TYPE_MOVIE){
+        tags[tag_count++] = tag_movie;
+    }
+
+    if(tag->type & TAG_TYPE_COLORED){
+        if((!(tag->type & TAG_TYPE_KEYWORD)) &&
+           (!(tag->type & TAG_TYPE_LINK)) &&
+           (!(tag->type & TAG_TYPE_SOUND)) &&
+           (!(tag->type & TAG_TYPE_MOVIE)))
+            tags[tag_count++] = tag_colored;
+    }
+
+    if((0 <= canvas->indent)  && (canvas->indent < MAX_INDENT)){
+        tags[tag_count++] = tag_indent[canvas->indent];
+    }
+
+    if(tag_count > 8){
+        LOG(LOG_INFO, "Too many nested tags. Truncated to 8.");
+        tag_count = 8;
+    }
+
+    switch(tag_count){
+        case 1:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], NULL);
+            break;
+        case 2:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], NULL);
+            break;
+        case 3:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], tags[2], NULL);
+            break;
+        case 4:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], tags[2], tags[3], NULL);
+            break;
+        case 5:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], tags[2], tags[3], tags[4], NULL);
+            break;
+        case 6:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], tags[2], tags[3], tags[4], tags[5], NULL);
+            break;
+        case 7:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], tags[2], tags[3], tags[4], tags[5], tags[6], NULL);
+            break;
+        case 8:
+            gtk_text_buffer_insert_with_tags(
+                    canvas->buffer, canvas->iter,
+                    utf_str, -1,
+                    tags[0], tags[1], tags[2], tags[3], tags[4], tags[5], tags[6], tags[7], NULL);
+            break;
+    }
+
+    tag->end = gtk_text_iter_get_offset(canvas->iter);
+
+    if((tag->type & TAG_TYPE_LINK) || (tag->type & TAG_TYPE_SOUND) ||
+       (tag->type & TAG_TYPE_MOVIE)){
+        set_link(tag);
+    }
+    END:
+    return;
+}
+
 static void draw_string2(CANVAS *canvas, DRAW_TEXT *text, TAG *tag)
 {
 	gchar *euc_str;
 	gchar *utf_str;
-
-	gint tag_count=0;
-	GtkTextTag *tags[8];
 
 	//LOG(LOG_DEBUG, "IN : draw_string2()");
 
 	euc_str = g_strndup(text->text, text->length);
 	utf_str = iconv_convert("euc-jp", "utf-8", euc_str);
 
-	if(tag == NULL){
-		if((0 <= canvas->indent)  && (canvas->indent < MAX_INDENT)){
-			gtk_text_buffer_insert_with_tags(
-				canvas->buffer, canvas->iter, 
-				utf_str, -1,
-				tag_plain, tag_indent[canvas->indent], NULL);
-		} else {
-			gtk_text_buffer_insert_with_tags(
-				canvas->buffer, canvas->iter, 
-				utf_str, -1,
-				tag_plain, NULL);
-		}
-		goto END;
-	}
-
-	tag->start = gtk_text_iter_get_offset(canvas->iter);
-
-	if((!(tag->type & TAG_TYPE_EMPHASIS)) && 
-	   (!(tag->type & TAG_TYPE_ITALIC)) && 
-	   (!(tag->type & TAG_TYPE_SUPERSCRIPT)) && 
-	   (!(tag->type & TAG_TYPE_SUBSCRIPT)))
-		tags[tag_count++] = tag_plain;
-
-
-	if(tag->type & TAG_TYPE_KEYWORD){
-		tags[tag_count++] = tag_keyword;
-	}
-
-	if(tag->type & TAG_TYPE_EMPHASIS){
-		tags[tag_count++] = tag_bold;
-	}
-
-	if(tag->type & TAG_TYPE_ITALIC){
-		tags[tag_count++] = tag_italic;
-        }
-
-	if(tag->type & TAG_TYPE_SUBSCRIPT){
-		tags[tag_count++] = tag_subscript;
-	}
-
-        if(tag->type & TAG_TYPE_SUPERSCRIPT){
-		tags[tag_count++] = tag_superscript;
-	}
-
-	if(tag->type & TAG_TYPE_CENTER){
-		tags[tag_count++] = tag_center;
-	}
-
-	if(tag->type & TAG_TYPE_LINK){
-		tags[tag_count++] = tag_link;
-	}
-
-	if(tag->type & TAG_TYPE_SOUND){
-		tags[tag_count++] = tag_sound;
-	}
-
-	if(tag->type & TAG_TYPE_MOVIE){
-		tags[tag_count++] = tag_movie;
-	}
-
-	if(tag->type & TAG_TYPE_COLORED){
-		if((!(tag->type & TAG_TYPE_KEYWORD)) && 
-		   (!(tag->type & TAG_TYPE_LINK)) && 
-		   (!(tag->type & TAG_TYPE_SOUND)) && 
-		   (!(tag->type & TAG_TYPE_MOVIE)))
-		tags[tag_count++] = tag_colored;
-	}
-
-	if((0 <= canvas->indent)  && (canvas->indent < MAX_INDENT)){
-		tags[tag_count++] = tag_indent[canvas->indent];
-	}
-
-	if(tag_count > 8){
-		LOG(LOG_INFO, "Too many nested tags. Truncated to 8.");
-		tag_count = 8;
-	}
-
-	switch(tag_count){
-	case 1:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], NULL);
-		break;
-	case 2:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], NULL);
-		break;
-	case 3:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], tags[2], NULL);
-		break;
-	case 4:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], tags[2], tags[3], NULL);
-		break;
-	case 5:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], tags[2], tags[3], tags[4], NULL);
-		break;
-	case 6:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], tags[2], tags[3], tags[4], tags[5], NULL);
-		break;
-	case 7:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], tags[2], tags[3], tags[4], tags[5], tags[6], NULL);
-		break;
-	case 8:
-		gtk_text_buffer_insert_with_tags(
-			canvas->buffer, canvas->iter, 
-			utf_str, -1,
-			tags[0], tags[1], tags[2], tags[3], tags[4], tags[5], tags[6], tags[7], NULL);
-		break;
-	}
-
-	tag->end = gtk_text_iter_get_offset(canvas->iter);
-
-	if((tag->type & TAG_TYPE_LINK) || (tag->type & TAG_TYPE_SOUND) ||
-	   (tag->type & TAG_TYPE_MOVIE)){
-		set_link(tag);
-	}
- END:
+    draw_string3(canvas, utf_str, tag);
 
 	g_free(euc_str);
 	g_free(utf_str);
@@ -669,9 +675,8 @@ void draw_content(CANVAS *canvas, DRAW_TEXT *text, BOOK_INFO *binfo, TAG *tag, g
 			} else if(strcmp(tag_name, "unicode") == 0) {
 
 			    get_attr(start_tag, "str", alt);
-			    l_text.text = alt;
-			    l_text.length = g_utf8_strlen(alt, 31);
-                draw_string(canvas, &l_text, tag, NULL);
+                gchar *alt2 = unescaper(alt);
+                draw_string3(canvas, alt2, tag);
                 skip_start_tag(&p, tag_name);
 
 			} else if(strcmp(tag_name, "gaiji") == 0){

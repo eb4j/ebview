@@ -38,13 +38,13 @@ static gchar *replace_table[] = {
 	"(1)", "(2)", "(3)", "(4)", "(5)", "(6)", "(7)", "(8)", // 13-01 - 08
 	"(9)", "(10)", "(11)", "(12)", "(13)", "(14)", "(15)", "(16)", // 13-09 - 16
 	"(17)", "(18)", "(19)", "(20)", "I", "II", "III", "IV", // 13-17 - 24
-	"V", "VI", "VII", "VIII", "IX", "X", NULL, "¥ß¥ê", // 13-25 - 32
-	"¥­¥í", "¥»¥ó¥Á", "¥á¡¼¥È¥ë", "¥°¥é¥à", "¥È¥ó", "¥¢¡¼¥ë", "¥Ø¥¯¥¿¡¼¥ë", "¥ê¥Ã¥È¥ë",  // 13-33 - 40
-	"¥ï¥Ã¥È", "¥«¥í¥ê¡¼", "¥É¥ë", "¥»¥ó¥È", "¥Ñ¡¼¥»¥ó¥È", "¥ß¥ê¥Ð¡¼¥ë" "¥Ú¡¼¥¸", "mm", // 13-41 - 48
+	"V", "VI", "VII", "VIII", "IX", "X", NULL, "ï¿½ß¥ï¿½", // 13-25 - 32
+	"ï¿½ï¿½ï¿½ï¿½", "ï¿½ï¿½ï¿½ï¿½ï¿½", "ï¿½á¡¼ï¿½È¥ï¿½", "ï¿½ï¿½ï¿½ï¿½ï¿½", "ï¿½È¥ï¿½", "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", "ï¿½Ø¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", "ï¿½ï¿½Ã¥È¥ï¿½",  // 13-33 - 40
+	"ï¿½ï¿½Ã¥ï¿½", "ï¿½ï¿½ï¿½ï¿½ê¡¼", "ï¿½É¥ï¿½", "ï¿½ï¿½ï¿½ï¿½ï¿½", "ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", "ï¿½ß¥ï¿½Ð¡ï¿½ï¿½ï¿½" "ï¿½Ú¡ï¿½ï¿½ï¿½", "mm", // 13-41 - 48
 	"cm", "km", "mg", "kg", "cc", "m2", NULL, NULL, // 13-49 - 56
-	NULL, NULL, NULL, NULL, NULL, NULL, "Ê¿À®", "\"", // 13-57 - 64
-	"\"", "No.", "K.K.", "TEL", "(¾å)", "(Ãæ)", "(²¼)", "(º¸)", // 13-65 - 72
-	"(±¦)", "(³ô)", "(Í­)", "(Âå)", "ÌÀ¼£", "ÂçÀµ", "¾¼ÏÂ",	NULL, // 13-73 - 80
+	NULL, NULL, NULL, NULL, NULL, NULL, "Ê¿ï¿½ï¿½", "\"", // 13-57 - 64
+	"\"", "No.", "K.K.", "TEL", "(ï¿½ï¿½)", "(ï¿½ï¿½)", "(ï¿½ï¿½)", "(ï¿½ï¿½)", // 13-65 - 72
+	"(ï¿½ï¿½)", "(ï¿½ï¿½)", "(Í­)", "(ï¿½ï¿½)", "ï¿½ï¿½ï¿½ï¿½", "ï¿½ï¿½ï¿½ï¿½", "ï¿½ï¿½ï¿½ï¿½",	NULL, // 13-73 - 80
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, // 13-81 - 88
 	NULL, NULL, NULL, NULL // 13-89 - 92
  };
@@ -451,3 +451,49 @@ gint guess_kanji(gint imax, guchar *buf)
 		return(KCODE_UNKNOWN);
 }
 
+gchar *unescaper(gchar *word) {
+   	g_assert(word != NULL);
+    int osize;
+    char *result;
+    char uni[6];
+
+    osize = strlen(word);
+	result = malloc(osize);
+	memset(result, 0x00, osize);
+
+    int i = 0;
+    int j = 0;
+	while(word[i] != '\0'){
+		if(word[i] != 0x5c) {
+            result[j] = word[i];
+            i++; j++;
+			continue;
+		}
+        if (word[i] != 0x75) {
+            result[j] = word[i];
+            i++; j++;
+            continue;
+        }
+        int u = 0;
+        int k = 0;
+        while(k < 4) {
+            int v = strchr("0123456789ABCDEF", word[i + k]);
+            if (v < 0) {
+                break;
+            }
+            u = (u << 4) + v;
+            k++;
+        }
+        i += 4;
+        if (k != 4) {
+            // ignore broken seequence
+            continue;
+        }
+        g_unichar_to_utf8(u, uni);
+        int unilen = strlen(uni);  // unilen maxmum 6byte
+        for (int k = 0; k < unilen; k++) {
+            result[j++] = uni[k];
+        }
+	}
+    return result;
+}
